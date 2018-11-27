@@ -69,6 +69,7 @@ plugins = \
 	plugins/imv-swima.opt \
 	plugins/imv-test.opt \
 	plugins/ipseckey.opt \
+	plugins/json.opt \
 	plugins/led.opt \
 	plugins/kernel-libipsec.opt \
 	plugins/kernel-netlink.opt \

@@ -733,6 +733,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_JSON
+  SUBDIRS += plugins/json
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/json/libstrongswan-json.la
+endif
+endif
+
 if MONOLITHIC
   SUBDIRS += .
 endif
