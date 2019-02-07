@@ -290,6 +290,8 @@ static ike_cfg_t* get_ike_cfg_by_id(private_sql_config_t *this, int id)
 	enumerator_t *e;
 	ike_cfg_t *ike_cfg = NULL;
 
+	DBG3(DBG_CFG, "SQL get IKE config #%d", id);
+
 	e = this->db->query(this->db,
 			"SELECT c.id, c.certreq, c.force_encap, c.local, c.remote "
 			"FROM ike_configs AS c WHERE c.id = ?",
@@ -311,6 +313,8 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 {
 	enumerator_t *e;
 	peer_cfg_t *peer_cfg = NULL;
+
+	DBG3(DBG_CFG, "SQL get peer config #%d", id);
 
 	e = this->db->query(this->db,
 			"SELECT c.id, c.name, c.ike_cfg, l.type, l.data, r.type, r.data, "
@@ -343,6 +347,8 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
  */
 static inline bool id_matches(identification_t *id, identification_t *sql_id)
 {
+	DBG3(DBG_CFG, "SQL checking ID match between %Y (type %d) and %Y (type %d)",
+			id, id->get_type(id), sql_id, sql_id->get_type(sql_id));
 	return !id || id->matches(id, sql_id) || sql_id->matches(sql_id, id);
 }
 
@@ -360,6 +366,8 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 	char *name, *virtual, *pool;
 	enumerator_t *enumerator;
 
+	DBG3(DBG_CFG, "SQL build peer cfg for %Y..%Y", me, other);
+
 	while (e->enumerate(e,
 			&id, &name, &ike_cfg, &l_type, &l_data, &r_type, &r_data,
 			&cert_policy, &uniqueid, &auth_method, &eap_type, &eap_vendor,
@@ -375,12 +383,21 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 
 		local_id = identification_create_from_encoding(l_type, l_data);
 		remote_id = identification_create_from_encoding(r_type, r_data);
-		if (!id_matches(me, local_id) || !id_matches(other, remote_id))
-		{
+
+        DBG3(DBG_CFG, "SQL found connection for %Y..%Y", local_id, remote_id);
+
+		if (!id_matches(me, local_id)) {
+			DBG2(DBG_CFG, "peer cfg %Y.. doesn't match %Y", local_id, me);
+			local_id->destroy(local_id);
+			remote_id->destroy(remote_id);
+			continue;
+		} else if (!id_matches(other, remote_id)) {
+			DBG2(DBG_CFG, "peer cfg ..%Y doesn't match %Y", remote_id, other);
 			local_id->destroy(local_id);
 			remote_id->destroy(remote_id);
 			continue;
 		}
+
 		ike = get_ike_cfg_by_id(this, ike_cfg);
 
 #ifdef ME
@@ -467,6 +484,8 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 	enumerator_t *e;
 	peer_cfg_t *peer_cfg = NULL;
 
+	DBG3(DBG_CFG, "SQL get_peer_cfg_by_name %s", name);
+
 	e = this->db->query(this->db,
 			"SELECT c.id, c.name, c.ike_cfg, l.type, l.data, r.type, r.data, "
 			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
@@ -546,6 +565,9 @@ METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
 		.me = me,
 		.other = other,
 	);
+
+	DBG3(DBG_CFG, "SQL request IKE config for %H..%H", me, other);
+
 	e->inner = this->db->query(this->db,
 							   "SELECT c.id, c.certreq, c.force_encap, "
 							   "c.local, c.remote FROM ike_configs AS c",
@@ -613,6 +635,8 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 		.me = me,
 		.other = other,
 	);
+
+	DBG3(DBG_CFG, "SQL request peer configs matching %Y..%Y", me, other);
 
 	/* TODO: only get configs whose IDs match exactly or contain wildcards */
 	e->inner = this->db->query(this->db,
