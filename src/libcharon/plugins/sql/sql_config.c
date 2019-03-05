@@ -165,11 +165,11 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 {
 	int id, lifetime, rekeytime, jitter, hostaccess, mode, ipcomp, reqid;
 	int start, dpd, close;
-	char *name, *updown;
+	char *name, *updown, *mark;
 	child_cfg_t *child_cfg;
 
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, &updown,
-						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid))
+						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid, &mark))
 	{
 		child_cfg_create_t child = {
 			.mode = mode,
@@ -186,6 +186,15 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 			.close_action = close,
 			.updown = updown,
 		};
+
+		if (mark) {
+			mark_t value;
+			if (mark_from_string(mark, MARK_OP_NONE, &value)) {
+				child.mark_in = child.mark_out = value;
+			} else {
+				DBG1(DBG_CFG, "Invalid mark %s on child config %s", mark, name);
+			}
+		}
 		child_cfg = child_cfg_create(name, &child);
 		add_esp_proposals(this, child_cfg, id);
 		add_traffic_selectors(this, child_cfg, id);
@@ -205,12 +214,12 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 	e = this->db->query(this->db,
 			"SELECT c.id, c.name, c.lifetime, c.rekeytime, c.jitter, c.updown, "
 			"c.hostaccess, c.mode, c.start_action, c.dpd_action, "
-			"c.close_action, c.ipcomp, c.reqid "
+			"c.close_action, c.ipcomp, c.reqid, c.mark "
 			"FROM child_configs AS c JOIN peer_config_child_config AS pc "
 			"ON c.id = pc.child_cfg WHERE pc.peer_cfg = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_TEXT, DB_INT,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT);
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_TEXT);
 	if (e)
 	{
 		while ((child_cfg = build_child_cfg(this, e)))
