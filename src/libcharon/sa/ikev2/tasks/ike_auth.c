@@ -976,7 +976,7 @@ METHOD(task_t, build_r, status_t,
 		id = this->ike_sa->get_my_id(this->ike_sa);
 		if (id->get_type(id) == ID_ANY)
 		{	/* no IDr received, apply configured ID */
-			if (!id_cfg || id_cfg->contains_wildcards(id_cfg))
+			if (!id_cfg)
 			{	/* no ID configured, use local IP address */
 				host_t *me;
 
