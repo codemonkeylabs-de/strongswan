@@ -432,7 +432,6 @@ static bool handle_sa(child_sa_t *child_sa)
 {
 	return child_sa->get_mark(child_sa, TRUE).value &&
 		   child_sa->get_mark(child_sa, FALSE).value &&
-		   child_sa->get_mode(child_sa) == MODE_TRANSPORT &&
 		   child_sa->get_protocol(child_sa) == PROTO_ESP;
 }
 
